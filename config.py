@@ -11,7 +11,7 @@ os.environ["CO_API_KEY"] = COHERE_API_KEY
 os.environ["TAVILY_API_KEY"] = TAVILY_API_KEY
 
 llm = ChatCohere(
-    model="command-r-plus",
+    model="command-nightly",
     temperature=0.3,
 )
 
