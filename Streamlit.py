@@ -47,17 +47,11 @@ if "stage" not in st.session_state:
 if "state" not in st.session_state:
     st.session_state.state = {}
 
-# -------------------------
-# Show Chat History
-# -------------------------
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# -------------------------
-# Chat Input
-# -------------------------
 
 user_input = st.chat_input("Type here...")
 
@@ -73,9 +67,6 @@ if user_input:
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # -----------------------
-    # Stage 1
-    # -----------------------
 
     if st.session_state.stage=="topic":
 
@@ -92,9 +83,6 @@ if user_input:
 
         st.session_state.stage="ready"
 
-    # -----------------------
-    # Stage 2
-    # -----------------------
 
     elif st.session_state.stage=="ready":
 
@@ -117,10 +105,6 @@ if user_input:
 
             st.session_state.stage="continue"
 
-    # -----------------------
-    # Stage 3
-    # -----------------------
-
     elif st.session_state.stage=="answer":
 
         state=st.session_state.state
@@ -134,25 +118,73 @@ if user_input:
 
         st.session_state.stage="continue"
 
-    # -----------------------
-    # Stage 4
-    # -----------------------
 
-    elif st.session_state.stage=="continue":
+elif st.session_state.stage == "continue":
 
-        if user_input.lower()=="yes":
+    if user_input.lower() == "yes":
 
-            st.session_state.state={}
+        st.session_state.state = {}
 
-            reply="Great 😊\n\nEnter another health topic."
+        reply = "Great! 😊\n\nPlease enter another health topic."
 
-            st.session_state.stage="topic"
+        st.session_state.stage = "topic"
 
-        else:
+    elif user_input.lower() == "no":
 
-            reply="Thank you for using HealthBot ❤️"
+        # Show goodbye message
+        reply = "👋 Thank you for using **Medical HealthBot** ❤️"
 
-            st.session_state.stage="end"
+        st.session_state.messages.append(
+            {
+                "role": "assistant",
+                "content": reply
+            }
+        )
+
+        with st.chat_message("assistant"):
+            st.markdown(reply)
+
+        # Small pause (optional)
+        import time
+        time.sleep(2)
+
+        # Clear chat history
+        st.session_state.messages = [
+            {
+                "role": "assistant",
+                "content": """
+# 👋 Hello!
+
+I am **Medical HealthBot: AI-Powered Patient Education System** 🩺
+
+I can help you:
+
+✅ Explain diseases in simple language
+✅ Provide symptoms, causes, treatment & prevention
+✅ Generate a short quiz to test your understanding
+✅ Evaluate your answers and provide feedback
+
+**Please enter a health topic to get started.**
+
+*Examples:*
+- Diabetes
+- Hypertension
+- Asthma
+- Dengue
+- Migraine
+"""
+            }
+        ]
+
+        # Reset state
+        st.session_state.state = {}
+        st.session_state.stage = "topic"
+
+        st.rerun()
+
+    else:
+
+        reply = "Please enter **yes** or **no**."
 
     else:
 
