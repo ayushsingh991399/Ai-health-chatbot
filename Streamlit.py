@@ -217,6 +217,3 @@ if user_input:
     with st.chat_message("assistant"):
         st.markdown(reply)
             
-
-    with st.chat_message("assistant"):
-        st.markdown(reply)
