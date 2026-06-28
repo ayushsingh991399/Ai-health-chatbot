@@ -36,7 +36,8 @@ Medical HealthBot helps users learn about medical conditions by:
 ```text
 Medical-HealthBot/
 │
-├── app.py
+├── main.py
+
 ├── graph.py
 ├── function.py
 ├── state.py
