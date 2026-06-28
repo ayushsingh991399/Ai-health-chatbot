@@ -1,22 +1,18 @@
 import os
+import streamlit as st
 
-from dotenv import load_dotenv
 from langchain_cohere import ChatCohere
 from langchain_community.tools import TavilySearchResults
 
-load_dotenv("config.env")
+COHERE_API_KEY = st.secrets["COHERE_API_KEY"]
+TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"]
 
-COHERE_API_KEY = os.getenv["COHERE_API_KEY"]
-TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
-
-assert TAVILY_API_KEY
-
+os.environ["CO_API_KEY"] = COHERE_API_KEY
+os.environ["TAVILY_API_KEY"] = TAVILY_API_KEY
 
 llm = ChatCohere(
-    model="command-nightly",
-    temperature=0.3
+    model="command-r-plus",
+    temperature=0.3,
 )
 
-search_tool = TavilySearchResults(
-    max_results=5
-)
+search_tool = TavilySearchResults(max_results=5)
