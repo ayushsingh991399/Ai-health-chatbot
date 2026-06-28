@@ -1,67 +1,87 @@
-from dotenv import load_dotenv
+from typing import TypedDict, List
+
+
+class HealthState(TypedDict, total=False):
+    # User Input
+    topic: str
+
+    # Tavily Search Results
+    search_results: List
+
+    # LLM Summary
+    summary: str
+
+    # Quiz Flow
+    ready: str
+    quiz_question: str
+    user_answer: str
+
+    # Evaluation
+    feedback: str
+
+    # Continue Session
+    continue_session: str
+
+
+
 import os
+from dotenv import load_dotenv
+
+from langchain_cohere import ChatCohere
 from langchain_community.tools import TavilySearchResults
-from langchain_openai import ChatOpenAI
-from typing import TypedDict
-from langgraph.graph import StateGraph, START, END
 
 load_dotenv("config.env")
-assert os.getenv("GOOGLE_API_KEY")
-assert os.getenv("TAVILY_API_KEY")
 
-from langchain_openai import ChatOpenAI
-
-llm = ChatOpenAI(
-    model="gpt-4.1-mini",
-    temperature=0
+llm = ChatCohere(
+    model="command-nightly",
+    temperature=0.3
 )
-
-class HealthState(TypedDict):
-    topic: str
-    search_results: str
-    summary: str
-    quiz: str
-    answer: str
-    grade: str
-    feedback: str
-    continue_chat: bool
-
 
 search_tool = TavilySearchResults(max_results=5)
 
+
+# -------------------------------
+# Node 1 : Ask Topic
+# -------------------------------
 def ask_topic(state):
-    topic = input("Enter a health topic: ")
-
-    return {
-        "topic": topic
-    }
+    return state
 
 
+# -------------------------------
+# Node 2 : Tavily Search
+# -------------------------------
 def tavily_search(state):
+
     results = search_tool.invoke(state["topic"])
 
     return {
         "search_results": results
     }
 
+
+# -------------------------------
+# Node 3 : Summarize
+# -------------------------------
 def summarize(state):
 
     prompt = f"""
-    You are a helpful medical assistant.
+You are a medical assistant.
 
-    Summarize the following medical information in simple,
-    patient-friendly language.
+Summarize the following medical information in simple,
+patient-friendly language.
 
-    Include:
-    - What it is
-    - Symptoms
-    - Causes
-    - Treatment
-    - Prevention
+Include
 
-    Search Results:
-    {state["search_results"]}
-    """
+- What it is
+- Symptoms
+- Causes
+- Treatment
+- Prevention
+
+Search Results:
+
+{state["search_results"]}
+"""
 
     response = llm.invoke(prompt)
 
@@ -69,39 +89,41 @@ def summarize(state):
         "summary": response.content
     }
 
+
+# -------------------------------
+# Node 4 : Display Summary
+# -------------------------------
 def display_summary(state):
 
-    print("\n" + "="*60)
-    print("MEDICAL SUMMARY")
-    print("="*60)
-
-    print(state["summary"])
-
-    print("="*60)
-
-    return {}
-
-def ready_check(state):
-
-    ready = input("\nType 'yes' when you are ready for the quiz: ")
-
     return {
-        "ready": ready
+        "summary": state["summary"]
     }
 
+
+# -------------------------------
+# Node 5 : Ready Check
+# -------------------------------
+def ready_check(state):
+
+    return {
+        "ready": state.get("ready", "")
+    }
+
+
+# -------------------------------
+# Node 6 : Generate Quiz
+# -------------------------------
 def generate_quiz(state):
 
     prompt = f"""
-    You are a medical educator.
+Generate ONE multiple choice question from the summary.
 
-    Based on the summary below, generate ONE simple
-    comprehension question for the patient.
+Summary:
 
-    Summary:
-    {state["summary"]}
+{state["summary"]}
 
-    Return only the question.
-    """
+Return only the question.
+"""
 
     response = llm.invoke(prompt)
 
@@ -109,51 +131,52 @@ def generate_quiz(state):
         "quiz_question": response.content
     }
 
+
+# -------------------------------
+# Node 7 : Ask Quiz
+# -------------------------------
 def ask_quiz(state):
 
-    print("\n" + "="*60)
-    print("QUIZ")
-    print("="*60)
-
-    print(state["quiz_question"])
-
-    print("="*60)
-
-    return {}
-
-def receive_answer(state):
-
-    answer = input("\nEnter your answer: ")
-
     return {
-        "user_answer": answer
+        "quiz_question": state["quiz_question"]
     }
 
+
+# -------------------------------
+# Node 8 : Receive Answer
+# -------------------------------
+def receive_answer(state):
+
+    return {
+        "user_answer": state.get("user_answer", "")
+    }
+
+
+# -------------------------------
+# Node 9 : Grade Answer
+# -------------------------------
 def grade_answer(state):
 
     prompt = f"""
-You are a medical instructor.
+Summary
 
-Summary:
-{state["summary"]}
+{state['summary']}
 
-Question:
-{state["quiz_question"]}
+Question
 
-Patient's Answer:
-{state["user_answer"]}
+{state['quiz_question']}
 
-Evaluate the patient's answer.
+User Answer
 
-Return in this format:
+{state['user_answer']}
 
-Grade: Correct / Partially Correct / Incorrect
+Evaluate the answer.
+
+Return
+
+Grade:
 
 Explanation:
-Explain why.
-
-Citation:
-Mention the relevant part of the summary.
 """
 
     response = llm.invoke(prompt)
@@ -162,48 +185,75 @@ Mention the relevant part of the summary.
         "feedback": response.content
     }
 
+
+# -------------------------------
+# Node 10 : Display Feedback
+# -------------------------------
 def display_feedback(state):
 
-    print("\n" + "="*60)
-    print("QUIZ RESULT")
-    print("="*60)
-
-    print(state["feedback"])
-
-    print("="*60)
-
-    return {}
-
-def continue_or_exit(state):
-
-    choice = input(
-        "\nWould you like to learn another topic? (yes/no): "
-    ).strip().lower()
-
     return {
-        "continue_session": choice
+        "feedback": state["feedback"]
     }
 
+
+# -------------------------------
+# Node 11 : Continue
+# -------------------------------
+def continue_chat(state):
+
+    return {
+        "continue_session": state.get("continue_session", "")
+    }
+
+
+# -------------------------------
+# Node 12 : Reset
+# -------------------------------
 def reset_state(state):
 
-    if state["continue_session"] == "yes":
+    return {
+        "topic": "",
+        "search_results": [],
+        "summary": "",
+        "ready": "",
+        "quiz_question": "",
+        "user_answer": "",
+        "feedback": "",
+        "continue_session": ""
+    }
 
-        return {
-            "topic": "",
-            "search_results": [],
-            "summary": "",
-            "ready": "",
-            "quiz_question": "",
-            "user_answer": "",
-            "feedback": "",
-            "continue_session": ""
-        }
 
-    return {}
+from langgraph.graph import StateGraph, START, END
+
+
+# -----------------------------
+# Quiz Router
+# -----------------------------
+def quiz_router(state):
+
+    if state.get("ready", "").lower() == "yes":
+        return "generate_quiz"
+
+    return "continue"
+
+
+# -----------------------------
+# Continue Router
+# -----------------------------
+def continue_router(state):
+
+    if state.get("continue_session", "").lower() == "yes":
+        return "reset"
+
+    return END
+
 
 builder = StateGraph(HealthState)
 
 
+# -----------------------------
+# Nodes
+# -----------------------------
 builder.add_node("ask_topic", ask_topic)
 builder.add_node("tavily_search", tavily_search)
 builder.add_node("summarize", summarize)
@@ -214,22 +264,60 @@ builder.add_node("ask_quiz", ask_quiz)
 builder.add_node("receive_answer", receive_answer)
 builder.add_node("grade", grade_answer)
 builder.add_node("feedback", display_feedback)
-builder.add_node("continue", continue_or_exit)
+builder.add_node("continue", continue_chat)
 builder.add_node("reset", reset_state)
 
 
+# -----------------------------
+# Main Flow
+# -----------------------------
 builder.add_edge(START, "ask_topic")
 builder.add_edge("ask_topic", "tavily_search")
 builder.add_edge("tavily_search", "summarize")
 builder.add_edge("summarize", "display_summary")
 builder.add_edge("display_summary", "ready_check")
-builder.add_edge("ready_check", "generate_quiz")
+
+
+# -----------------------------
+# Ready for Quiz?
+# -----------------------------
+builder.add_conditional_edges(
+    "ready_check",
+    quiz_router,
+    {
+        "generate_quiz": "generate_quiz",
+        "continue": "continue",
+    },
+)
+
+
+# -----------------------------
+# Quiz Flow
+# -----------------------------
 builder.add_edge("generate_quiz", "ask_quiz")
 builder.add_edge("ask_quiz", "receive_answer")
 builder.add_edge("receive_answer", "grade")
 builder.add_edge("grade", "feedback")
 builder.add_edge("feedback", "continue")
-builder.add_edge("continue", "reset")
-builder.add_edge("reset", END)
+
+
+# -----------------------------
+# Continue?
+# -----------------------------
+builder.add_conditional_edges(
+    "continue",
+    continue_router,
+    {
+        "reset": "reset",
+        END: END,
+    },
+)
+
+
+# -----------------------------
+# Restart
+# -----------------------------
+builder.add_edge("reset", "ask_topic")
+
 
 graph = builder.compile()
