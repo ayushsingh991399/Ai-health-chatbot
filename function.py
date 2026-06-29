@@ -57,10 +57,8 @@ def generate_quiz(state):
     prompt = f"""
     You are a medical Teacher.
 
-    Based on the summary below,
-    first ask the patient whether they would like:
-    1. ONE Multiple-Choice Question (MCQ), or
-    2. ONE Simple Comprehension Question.
+    Based on the summary below, generate ONE simple
+    comprehension question for the patient.
     Summary:
     {state["summary"]}
 
@@ -104,8 +102,9 @@ def grade_answer(state):
         Return in this format:
         
         Grade:
-        first check the answer is correct /partially correct/ incorrect,
-        on the bases of this provide the grade A/B/C
+        first check the answer is correct /partially/correct/incorrect,
+        on the bases of this provide the grade A/B/C.
+        
 
         Explanation:
         Explain why.
